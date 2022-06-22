@@ -1,9 +1,11 @@
 const express = require("express");
 const axios = require("axios");
+const cors = require("cors");
 
 const expressServer = express();
 
 expressServer.use(express.json());
+expressServer.use(cors())
 
 expressServer.get("/", async (request, response) => {
   const { companyId } = request.body;
