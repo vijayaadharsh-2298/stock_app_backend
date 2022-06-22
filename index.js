@@ -8,7 +8,7 @@ expressServer.use(express.json());
 expressServer.use(cors())
 
 expressServer.get("/", async (request, response) => {
-  const { companyId } = request.body;
+  const { companyId } = request.query;
 
   const URL = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${companyId}&apikey=${process.env.API_KEY}`;
 
