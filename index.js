@@ -1,27 +1,65 @@
-const express = require("express");
-const axios = require("axios");
-const cors = require("cors");
+const MongoClient = require('mongodb').MongoClient;
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
+const expresServer = express();
 
-const expressServer = express();
+const url = "mongodb://localhost:27017";
 
-expressServer.use(express.json());
-expressServer.use(cors())
+expresServer.use(express.json());
+expresServer.use(cors());
 
-expressServer.get("/", async (request, response) => {
-  const { companyId } = request.query;
 
-  const URL = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${companyId}&apikey=${process.env.API_KEY}`;
+expresServer.get('/', async function (req, res) {
+  const { companyId } = req.query;
+
+  const req_url =
+    'https://www.alphavantage.co/query?function=OVERVIEW&symbol=' + companyId + '&apikey=SQVTXIQMTBY2CVA2';
 
   try {
-    const responseData = await axios({
-      method: "GET",
-      url: URL,
+    let response = await axios({
+      method: 'GET',
+      url: req_url
     });
-    response.status(200).send(responseData.data);
-  } catch (error) {
-    response.status(400).send(error)
-  }
+    res.send(response.data);
+  } catch (err) {
+    console.log(err)
 
+  }
 });
 
-expressServer.listen(3000);
+expresServer.post('/', async (req, res) => {
+  await MongoClient.connect(url, async (err, db) => {
+    if (err) throw err;
+    const dbo = db.db('Stock_Details');
+    const { companyId } = req.query;
+    const req_url =
+      `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${companyId}&apikey=SQVTXIQMTBY2CVA2`;
+
+
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: req_url
+      });
+      console.log(response.data);
+
+      const isAvailable = await dbo.collection("CompanyStockDetails").findOne({ Symbol: companyId });
+      if (Object.keys(isAvailable).length === 0) {
+        dbo.collection('CompanyStockDetails').insertOne(response.data, (result) => {
+          res.send(response.data);
+          db.close();
+        })
+      } else {
+        res.send(response.data);
+      }
+
+    } catch (err) {
+      console.log(err);
+    }
+  });
+})
+
+expresServer.listen(3000, function () {
+  console.log("3000 running successfully...")
+});
